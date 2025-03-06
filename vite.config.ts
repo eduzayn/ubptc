@@ -12,7 +12,10 @@ if (process.env.TEMPO === "true") {
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: process.env.NODE_ENV === "development" ? "/" : process.env.VITE_BASE_PATH || "/",
+  base:
+    process.env.NODE_ENV === "development"
+      ? "/"
+      : process.env.VITE_BASE_PATH || "/",
   optimizeDeps: {
     entries: ["src/main.tsx", "src/tempobook/**/*"],
   },
@@ -31,5 +34,22 @@ export default defineConfig({
   server: {
     // @ts-ignore
     allowedHosts: true,
-  }
+  },
+  build: {
+    rollupOptions: {
+      // Garantir que o polyfill seja incluído no build
+      input: {
+        main: path.resolve(__dirname, "index.html"),
+      },
+    },
+    // Garantir que o Button seja definido globalmente
+    commonjsOptions: {
+      transformMixedEsModules: true,
+    },
+  },
+  define: {
+    // Definir variáveis globais para o build
+    "window.Button": "window.Button",
+    "global.Button": "global.Button",
+  },
 });

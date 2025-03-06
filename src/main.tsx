@@ -4,8 +4,8 @@ import App from "./App.tsx";
 import "./index.css";
 import { BrowserRouter } from "react-router-dom";
 
-// Definir Button globalmente para evitar erros de referência
-window.Button = window.Button || {};
+// Importar o componente Button global
+import "./components/ui/button-global";
 
 // Import the dev tools and initialize them
 import { TempoDevtools } from "tempo-devtools";
