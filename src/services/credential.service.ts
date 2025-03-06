@@ -1,5 +1,8 @@
 import { supabase } from "@/lib/supabase";
+import { Database } from "@/types/supabase";
 import { PaymentService } from "./payment.service";
+
+export type Credential = Database["public"]["Tables"]["credentials"]["Row"];
 
 export interface CredentialData {
   userId: string;
@@ -7,7 +10,6 @@ export interface CredentialData {
   profession: string;
   email: string;
   photo: string;
-  paymentId: string;
 }
 
 export class CredentialService {
@@ -16,7 +18,7 @@ export class CredentialService {
    */
   static async verifyPaymentAndGenerateCredential(
     paymentId: string,
-    userData: Omit<CredentialData, "paymentId">,
+    userData: CredentialData,
   ) {
     try {
       // 1. Verificar status do pagamento no Asaas
@@ -28,11 +30,23 @@ export class CredentialService {
         paymentStatus.status === "RECEIVED" ||
         paymentStatus.status === "RECEIVED_IN_CASH"
       ) {
+        // Atualizar status do pagamento no banco de dados
+        await PaymentService.updatePaymentStatus(paymentId, "completed");
+
+        // Buscar o registro de pagamento no banco de dados
+        const { data: paymentRecord, error: paymentError } = await supabase
+          .from("payments")
+          .select("id")
+          .eq("asaas_id", paymentId)
+          .single();
+
+        if (paymentError) throw paymentError;
+
         // Gerar credencial
-        const credential = await this.generateCredential({
-          ...userData,
-          paymentId,
-        });
+        const credential = await this.generateCredential(
+          userData,
+          paymentRecord.id,
+        );
 
         return {
           success: true,
@@ -56,7 +70,10 @@ export class CredentialService {
   /**
    * Gera uma nova credencial para o usuário
    */
-  static async generateCredential(credentialData: CredentialData) {
+  static async generateCredential(
+    credentialData: CredentialData,
+    paymentId?: string,
+  ) {
     try {
       // Gerar data de emissão e validade
       const issueDate = new Date();
@@ -66,39 +83,51 @@ export class CredentialService {
       // Gerar código QR único para a credencial
       const qrCode = `https://associacaopro.com.br/validar-credencial?id=${credentialData.userId}&token=${this.generateToken()}`;
 
-      // Em um cenário real, aqui você salvaria os dados no Supabase
-      // const { data, error } = await supabase
-      //   .from('credentials')
-      //   .insert([
-      //     {
-      //       user_id: credentialData.userId,
-      //       qr_code: qrCode,
-      //       issue_date: issueDate.toISOString(),
-      //       expiry_date: expiryDate.toISOString(),
-      //       payment_id: credentialData.paymentId,
-      //       status: 'active'
-      //     }
-      //   ])
-      //   .select();
+      // Verificar se já existe uma credencial ativa para o usuário
+      const { data: existingCredential, error: checkError } = await supabase
+        .from("credentials")
+        .select("*")
+        .eq("user_id", credentialData.userId)
+        .eq("status", "active")
+        .maybeSingle();
 
-      // if (error) throw error;
+      if (checkError) throw checkError;
 
-      // Simulando resposta do banco de dados
-      const credential = {
-        id: this.generateId(),
-        userId: credentialData.userId,
+      // Se já existir uma credencial ativa, atualizá-la para inativa
+      if (existingCredential) {
+        const { error: updateError } = await supabase
+          .from("credentials")
+          .update({ status: "inactive" })
+          .eq("id", existingCredential.id);
+
+        if (updateError) throw updateError;
+      }
+
+      // Criar nova credencial
+      const { data, error } = await supabase
+        .from("credentials")
+        .insert([
+          {
+            user_id: credentialData.userId,
+            qr_code: qrCode,
+            issue_date: issueDate.toISOString(),
+            expiry_date: expiryDate.toISOString(),
+            status: "active",
+            payment_id: paymentId || null,
+          },
+        ])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return {
+        ...data,
         name: credentialData.name,
         profession: credentialData.profession,
         email: credentialData.email,
         photo: credentialData.photo,
-        qrCode,
-        issueDate,
-        expiryDate,
-        status: "Ativo",
-        paymentId: credentialData.paymentId,
       };
-
-      return credential;
     } catch (error) {
       console.error("Erro ao gerar credencial:", error);
       throw error;
@@ -116,41 +145,155 @@ export class CredentialService {
   }
 
   /**
-   * Gera um ID aleatório
+   * Obtém a credencial ativa de um usuário
    */
-  private static generateId() {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+  static async getUserCredential(userId: string) {
+    try {
+      const { data, error } = await supabase
+        .from("credentials")
+        .select(
+          `
+          id,
+          qr_code,
+          issue_date,
+          expiry_date,
+          status,
+          users!inner(name, profession, email, photo_url)
+        `,
+        )
+        .eq("user_id", userId)
+        .eq("status", "active")
+        .single();
+
+      if (error) throw error;
+
+      return {
+        ...data,
+        name: data.users.name,
+        profession: data.users.profession,
+        email: data.users.email,
+        photo: data.users.photo_url,
+      };
+    } catch (error) {
+      console.error(`Erro ao buscar credencial do usuário ${userId}:`, error);
+      throw error;
+    }
   }
 
   /**
-   * Valida uma credencial pelo ID e token
+   * Valida uma credencial pelo ID
    */
-  static async validateCredential(id: string, token: string) {
+  static async validateCredential(id: string) {
     try {
-      // Em um cenário real, aqui você consultaria o Supabase
-      // const { data, error } = await supabase
-      //   .from('credentials')
-      //   .select('*')
-      //   .eq('user_id', id)
-      //   .single();
+      const { data, error } = await supabase
+        .from("credentials")
+        .select(
+          `
+          id,
+          issue_date,
+          expiry_date,
+          status,
+          users!inner(name, profession, photo_url)
+        `,
+        )
+        .eq("id", id)
+        .single();
 
-      // if (error) throw error;
-      // if (!data) return { valid: false, message: 'Credencial não encontrada' };
+      if (error) throw error;
 
-      // const isValid = data.status === 'active' && new Date(data.expiry_date) > new Date();
-
-      // Simulando validação
-      const isValid = true;
+      const now = new Date();
+      const expiryDate = new Date(data.expiry_date);
+      const isValid = data.status === "active" && expiryDate > now;
 
       return {
         valid: isValid,
+        credential: {
+          id: data.id,
+          name: data.users.name,
+          profession: data.users.profession,
+          photo: data.users.photo_url,
+          issueDate: data.issue_date,
+          expiryDate: data.expiry_date,
+          status: data.status,
+        },
         message: isValid
           ? "Credencial válida"
           : "Credencial inválida ou expirada",
-        // credential: isValid ? data : null
       };
     } catch (error) {
-      console.error("Erro ao validar credencial:", error);
+      console.error(`Erro ao validar credencial com ID ${id}:`, error);
+      return {
+        valid: false,
+        message: "Credencial não encontrada",
+      };
+    }
+  }
+
+  /**
+   * Renova uma credencial expirada
+   */
+  static async renewCredential(userId: string, paymentId: string) {
+    try {
+      // Verificar se o pagamento foi confirmado
+      const { success, credential, message } =
+        await this.verifyPaymentAndGenerateCredential(
+          paymentId,
+          { userId, name: "", profession: "", email: "", photo: "" }, // Esses dados serão preenchidos pelo método
+        );
+
+      if (!success) {
+        throw new Error(message);
+      }
+
+      return credential;
+    } catch (error) {
+      console.error(`Erro ao renovar credencial do usuário ${userId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obtém estatísticas de credenciais
+   */
+  static async getCredentialStats() {
+    try {
+      // Total de credenciais ativas
+      const { count: activeCredentials, error: activeError } = await supabase
+        .from("credentials")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "active");
+
+      if (activeError) throw activeError;
+
+      // Total de credenciais expiradas
+      const now = new Date().toISOString();
+      const { count: expiredCredentials, error: expiredError } = await supabase
+        .from("credentials")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "active")
+        .lt("expiry_date", now);
+
+      if (expiredError) throw expiredError;
+
+      // Credenciais emitidas este mês
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+
+      const { count: monthCredentials, error: monthError } = await supabase
+        .from("credentials")
+        .select("*", { count: "exact", head: true })
+        .gte("issue_date", startOfMonth.toISOString());
+
+      if (monthError) throw monthError;
+
+      return {
+        activeCredentials,
+        expiredCredentials,
+        monthCredentials,
+      };
+    } catch (error) {
+      console.error("Erro ao buscar estatísticas de credenciais:", error);
       throw error;
     }
   }

@@ -212,4 +212,42 @@ export class AuthService {
       throw error;
     }
   }
+
+  /**
+   * Lista todos os usuários (para administradores)
+   */
+  static async listUsers() {
+    try {
+      const { data, error } = await supabase
+        .from("users")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error("Erro ao listar usuários:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Aprova um usuário (para administradores)
+   */
+  static async approveUser(userId: string) {
+    try {
+      const { data, error } = await supabase
+        .from("users")
+        .update({ is_approved: true })
+        .eq("id", userId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error("Erro ao aprovar usuário:", error);
+      throw error;
+    }
+  }
 }

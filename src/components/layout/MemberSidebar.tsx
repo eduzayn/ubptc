@@ -1,4 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import {
   CreditCard,
@@ -11,6 +12,8 @@ import {
 
 export default function MemberSidebar() {
   const location = useLocation();
+
+  const { signOut, profile } = useAuth();
 
   const menuItems = [
     {
@@ -46,14 +49,19 @@ export default function MemberSidebar() {
         <div className="flex items-center gap-3 mb-8">
           <div className="w-12 h-12 rounded-full overflow-hidden bg-primary/10">
             <img
-              src="https://api.dicebear.com/7.x/avataaars/svg?seed=joao"
+              src={
+                profile?.photo_url ||
+                "https://api.dicebear.com/7.x/avataaars/svg?seed=user"
+              }
               alt="Avatar"
               className="w-full h-full object-cover"
             />
           </div>
           <div>
-            <h3 className="font-medium">João Silva</h3>
-            <p className="text-sm text-muted-foreground">Engenheiro Civil</p>
+            <h3 className="font-medium">{profile?.name || "Usuário"}</h3>
+            <p className="text-sm text-muted-foreground">
+              {profile?.profession || "Associado"}
+            </p>
           </div>
         </div>
 
@@ -75,13 +83,13 @@ export default function MemberSidebar() {
           ))}
 
           <div className="pt-6 mt-6 border-t border-gray-200">
-            <Link
-              to="/"
-              className="flex items-center gap-3 px-3 py-2 rounded-md text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+            <button
+              onClick={signOut}
+              className="flex items-center gap-3 px-3 py-2 rounded-md text-sm text-gray-700 hover:bg-gray-100 transition-colors w-full"
             >
               <LogOut size={20} />
               Sair
-            </Link>
+            </button>
           </div>
         </nav>
       </div>

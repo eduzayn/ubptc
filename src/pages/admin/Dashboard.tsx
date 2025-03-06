@@ -4,12 +4,35 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+} from "../../components/ui/card";
+import WebhookConfig from "./WebhookConfig";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../../components/ui/tabs";
 import { Users, BookOpen, CreditCard, Award, FileText } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { Button } from "../../components/ui/button";
+import { useEffect } from "react";
+import { supabase } from "../../lib/supabase";
 
 export default function AdminDashboard() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Verificação simplificada com console.log para debug
+    const isAdminLoggedIn = localStorage.getItem("isAdminLoggedIn");
+    console.log("Admin login status:", isAdminLoggedIn);
+
+    if (isAdminLoggedIn !== "true") {
+      console.log("Redirecting to login");
+      navigate("/admin/login");
+    } else {
+      console.log("Admin is logged in");
+    }
+  }, [navigate]);
   // Mock data - in a real app, this would come from your API
   const stats = {
     totalUsers: 256,
@@ -106,6 +129,7 @@ export default function AdminDashboard() {
           <TabsTrigger value="library">Biblioteca</TabsTrigger>
           <TabsTrigger value="payments">Pagamentos</TabsTrigger>
           <TabsTrigger value="certificates">Certificados</TabsTrigger>
+          <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
         </TabsList>
 
         <TabsContent value="users" className="space-y-4">
@@ -497,6 +521,43 @@ export default function AdminDashboard() {
                     </tr>
                   </tbody>
                 </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="webhooks" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Configuração de Webhooks</CardTitle>
+              <CardDescription>
+                Configure os webhooks para integração com serviços externos.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 border rounded-md">
+                  <div>
+                    <h3 className="font-medium">Asaas Webhook</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Configuração para receber notificações de pagamentos do
+                      Asaas
+                    </p>
+                  </div>
+                  <Link to="/admin/webhooks">
+                    <Button>Configurar</Button>
+                  </Link>
+                </div>
+
+                <div className="flex items-center justify-between p-4 border rounded-md">
+                  <div>
+                    <h3 className="font-medium">Status dos Webhooks</h3>
+                    <div className="flex items-center mt-2">
+                      <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
+                      <span className="text-sm">Asaas Webhook: Ativo</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>

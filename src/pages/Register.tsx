@@ -1,9 +1,15 @@
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { registerSchema } from "../lib/schema";
+import type { z } from "zod";
+import { supabase } from "../lib/supabase";
+import { uploadImage } from "../lib/upload";
 import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import { Textarea } from "../components/ui/textarea";
 import {
   Card,
   CardContent,
@@ -11,62 +17,137 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+} from "../components/ui/card";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../components/ui/tabs";
 
 export default function Register() {
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Form state
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    profession: "",
-    address: "",
-    phone: "",
-    documents: {
-      photo: null,
-      addressProof: null,
-      courseCertificate: null,
+  // Form state com react-hook-form e zod
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    watch,
+  } = useForm<z.infer<typeof registerSchema>>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      profession: "",
+      address: "",
+      phone: "",
     },
   });
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
+  // Estado para os documentos (não incluídos no schema principal)
+  const [documents, setDocuments] = useState({
+    photo: null as File | null,
+    addressProof: null as File | null,
+    courseCertificate: null as File | null,
+  });
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Função para lidar com upload de documentos
+  const handleDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, files } = e.target;
     if (files && files.length > 0) {
-      setFormData((prev) => ({
+      setDocuments((prev) => ({
         ...prev,
-        documents: {
-          ...prev.documents,
-          [name]: files[0],
-        },
+        [name]: files[0],
       }));
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Importar função para criar bucket
+  const createBucketIfNotExists = async (
+    bucket: string,
+    isPublic: boolean = true,
+  ) => {
+    try {
+      // Verificar se o bucket já existe
+      const { data: buckets } = await supabase.storage.listBuckets();
+      const bucketExists = buckets?.some((b) => b.name === bucket);
+
+      if (!bucketExists) {
+        // Criar o bucket
+        const { error } = await supabase.storage.createBucket(bucket, {
+          public: isPublic,
+        });
+
+        if (error) throw error;
+      }
+
+      return true;
+    } catch (error) {
+      console.error(`Erro ao criar bucket ${bucket}:`, error);
+      throw error;
+    }
+  };
+
+  // Função para submeter o formulário
+  const onSubmit = async (data: z.infer<typeof registerSchema>) => {
     setIsLoading(true);
 
-    // Simulando envio do formulário
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      // Criar usuário no Supabase Auth
+      const { data: authData, error } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          data: {
+            name: data.name,
+          },
+        },
+      });
+
+      if (error) throw error;
+
+      // Upload da foto do usuário se fornecida
+      let photoUrl = "";
+      if (documents.photo) {
+        // Garantir que o bucket existe
+        await createBucketIfNotExists("avatars", true);
+        photoUrl = await uploadImage(
+          documents.photo,
+          "avatars",
+          authData.user?.id,
+        );
+      }
+
+      // Criar perfil do usuário na tabela users
+      if (authData.user) {
+        const { error: profileError } = await supabase.from("users").insert([
+          {
+            id: authData.user.id,
+            email: data.email,
+            name: data.name,
+            profession: data.profession,
+            address: data.address,
+            phone: data.phone,
+            photo_url: photoUrl || null,
+            is_approved: false, // Usuários precisam ser aprovados
+          },
+        ]);
+
+        if (profileError) throw profileError;
+      }
+
       // Redirecionar para a página de checkout
       window.location.href = "/checkout";
-    }, 1500);
+    } catch (error: any) {
+      alert(error.message || "Erro ao criar conta");
+      console.error("Erro ao registrar:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -89,52 +170,47 @@ export default function Register() {
                 <TabsTrigger value="documents">Documentos</TabsTrigger>
               </TabsList>
 
-              <form onSubmit={handleSubmit}>
+              <form onSubmit={handleSubmit(onSubmit)}>
                 <TabsContent value="personal" className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="name">Nome Completo</Label>
-                      <Input
-                        id="name"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleChange}
-                        required
-                      />
+                      <Input id="name" {...register("name")} />
+                      {errors.name && (
+                        <p className="text-sm text-red-500 mt-1">
+                          {errors.name.message}
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="profession">Profissão</Label>
-                      <Input
-                        id="profession"
-                        name="profession"
-                        value={formData.profession}
-                        onChange={handleChange}
-                        required
-                      />
+                      <Input id="profession" {...register("profession")} />
+                      {errors.profession && (
+                        <p className="text-sm text-red-500 mt-1">
+                          {errors.profession.message}
+                        </p>
+                      )}
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        name="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={handleChange}
-                        required
-                      />
+                      <Input id="email" type="email" {...register("email")} />
+                      {errors.email && (
+                        <p className="text-sm text-red-500 mt-1">
+                          {errors.email.message}
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="phone">Telefone</Label>
-                      <Input
-                        id="phone"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleChange}
-                        required
-                      />
+                      <Input id="phone" {...register("phone")} />
+                      {errors.phone && (
+                        <p className="text-sm text-red-500 mt-1">
+                          {errors.phone.message}
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -143,23 +219,27 @@ export default function Register() {
                       <Label htmlFor="password">Senha</Label>
                       <Input
                         id="password"
-                        name="password"
                         type="password"
-                        value={formData.password}
-                        onChange={handleChange}
-                        required
+                        {...register("password")}
                       />
+                      {errors.password && (
+                        <p className="text-sm text-red-500 mt-1">
+                          {errors.password.message}
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="confirmPassword">Confirmar Senha</Label>
                       <Input
                         id="confirmPassword"
-                        name="confirmPassword"
                         type="password"
-                        value={formData.confirmPassword}
-                        onChange={handleChange}
-                        required
+                        {...register("confirmPassword")}
                       />
+                      {errors.confirmPassword && (
+                        <p className="text-sm text-red-500 mt-1">
+                          {errors.confirmPassword.message}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </TabsContent>
@@ -169,12 +249,14 @@ export default function Register() {
                     <Label htmlFor="address">Endereço Completo</Label>
                     <Textarea
                       id="address"
-                      name="address"
-                      value={formData.address}
-                      onChange={handleChange}
-                      required
+                      {...register("address")}
                       className="min-h-[100px]"
                     />
+                    {errors.address && (
+                      <p className="text-sm text-red-500 mt-1">
+                        {errors.address.message}
+                      </p>
+                    )}
                   </div>
                 </TabsContent>
 
@@ -186,7 +268,7 @@ export default function Register() {
                       name="photo"
                       type="file"
                       accept="image/*"
-                      onChange={handleFileChange}
+                      onChange={handleDocumentChange}
                       required
                     />
                     <p className="text-sm text-muted-foreground">
@@ -203,7 +285,7 @@ export default function Register() {
                       name="addressProof"
                       type="file"
                       accept=".pdf,.jpg,.jpeg,.png"
-                      onChange={handleFileChange}
+                      onChange={handleDocumentChange}
                       required
                     />
                     <p className="text-sm text-muted-foreground">
@@ -220,7 +302,7 @@ export default function Register() {
                       name="courseCertificate"
                       type="file"
                       accept=".pdf,.jpg,.jpeg,.png"
-                      onChange={handleFileChange}
+                      onChange={handleDocumentChange}
                       required
                     />
                     <p className="text-sm text-muted-foreground">

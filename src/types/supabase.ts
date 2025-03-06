@@ -15,7 +15,7 @@ export interface Database {
           created_at: string;
           email: string;
           name: string;
-          profession: string;
+          profession: string | null;
           address: string | null;
           phone: string | null;
           photo_url: string | null;
@@ -26,7 +26,7 @@ export interface Database {
           created_at?: string;
           email: string;
           name: string;
-          profession: string;
+          profession?: string | null;
           address?: string | null;
           phone?: string | null;
           photo_url?: string | null;
@@ -37,22 +37,72 @@ export interface Database {
           created_at?: string;
           email?: string;
           name?: string;
-          profession?: string;
+          profession?: string | null;
           address?: string | null;
           phone?: string | null;
           photo_url?: string | null;
           is_approved?: boolean;
         };
       };
+      notifications: {
+        Row: {
+          id: string;
+          user_id: string;
+          title: string;
+          message: string;
+          type: string;
+          read: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          title: string;
+          message: string;
+          type: string;
+          read?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          title?: string;
+          message?: string;
+          type?: string;
+          read?: boolean;
+          created_at?: string;
+        };
+      };
+      messages: {
+        Row: {
+          id: string;
+          user_id: string;
+          content: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          content: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          content?: string;
+          created_at?: string;
+        };
+      };
       courses: {
         Row: {
           id: string;
           created_at: string;
+          updated_at: string;
           title: string;
           description: string;
           price: number;
           is_free: boolean;
-          category: string;
+          category: string | null;
           image_url: string | null;
           instructor: string | null;
           duration: string | null;
@@ -60,11 +110,12 @@ export interface Database {
         Insert: {
           id?: string;
           created_at?: string;
+          updated_at?: string;
           title: string;
           description: string;
           price: number;
           is_free?: boolean;
-          category: string;
+          category?: string | null;
           image_url?: string | null;
           instructor?: string | null;
           duration?: string | null;
@@ -72,11 +123,12 @@ export interface Database {
         Update: {
           id?: string;
           created_at?: string;
+          updated_at?: string;
           title?: string;
           description?: string;
           price?: number;
           is_free?: boolean;
-          category?: string;
+          category?: string | null;
           image_url?: string | null;
           instructor?: string | null;
           duration?: string | null;
@@ -85,175 +137,50 @@ export interface Database {
       course_modules: {
         Row: {
           id: string;
-          created_at: string;
           course_id: string;
           title: string;
-          order: number;
+          order_number: number;
         };
         Insert: {
           id?: string;
-          created_at?: string;
           course_id: string;
           title: string;
-          order: number;
+          order_number: number;
         };
         Update: {
           id?: string;
-          created_at?: string;
           course_id?: string;
           title?: string;
-          order?: number;
+          order_number?: number;
         };
       };
-      course_lessons: {
+      lessons: {
         Row: {
           id: string;
-          created_at: string;
           module_id: string;
           title: string;
           type: string;
-          content_url: string | null;
+          content: string | null;
           duration: string | null;
-          order: number;
+          order_number: number;
         };
         Insert: {
           id?: string;
-          created_at?: string;
           module_id: string;
           title: string;
           type: string;
-          content_url?: string | null;
+          content?: string | null;
           duration?: string | null;
-          order: number;
+          order_number: number;
         };
         Update: {
           id?: string;
-          created_at?: string;
           module_id?: string;
           title?: string;
           type?: string;
-          content_url?: string | null;
+          content?: string | null;
           duration?: string | null;
-          order?: number;
-        };
-      };
-      user_courses: {
-        Row: {
-          id: string;
-          created_at: string;
-          user_id: string;
-          course_id: string;
-          progress: number;
-          last_accessed: string | null;
-          completed: boolean;
-        };
-        Insert: {
-          id?: string;
-          created_at?: string;
-          user_id: string;
-          course_id: string;
-          progress?: number;
-          last_accessed?: string | null;
-          completed?: boolean;
-        };
-        Update: {
-          id?: string;
-          created_at?: string;
-          user_id?: string;
-          course_id?: string;
-          progress?: number;
-          last_accessed?: string | null;
-          completed?: boolean;
-        };
-      };
-      certificates: {
-        Row: {
-          id: string;
-          created_at: string;
-          user_id: string;
-          course_id: string;
-          issue_date: string;
-          download_url: string | null;
-        };
-        Insert: {
-          id?: string;
-          created_at?: string;
-          user_id: string;
-          course_id: string;
-          issue_date: string;
-          download_url?: string | null;
-        };
-        Update: {
-          id?: string;
-          created_at?: string;
-          user_id?: string;
-          course_id?: string;
-          issue_date?: string;
-          download_url?: string | null;
-        };
-      };
-      credentials: {
-        Row: {
-          id: string;
-          created_at: string;
-          user_id: string;
-          qr_code: string;
-          issue_date: string;
-          expiry_date: string;
-          status: string;
-        };
-        Insert: {
-          id?: string;
-          created_at?: string;
-          user_id: string;
-          qr_code: string;
-          issue_date: string;
-          expiry_date: string;
-          status: string;
-        };
-        Update: {
-          id?: string;
-          created_at?: string;
-          user_id?: string;
-          qr_code?: string;
-          issue_date?: string;
-          expiry_date?: string;
-          status?: string;
-        };
-      };
-      payments: {
-        Row: {
-          id: string;
-          created_at: string;
-          user_id: string;
-          course_id: string | null;
-          amount: number;
-          status: string;
-          payment_date: string;
-          asaas_id: string | null;
-          payment_method: string;
-        };
-        Insert: {
-          id?: string;
-          created_at?: string;
-          user_id: string;
-          course_id?: string | null;
-          amount: number;
-          status: string;
-          payment_date: string;
-          asaas_id?: string | null;
-          payment_method: string;
-        };
-        Update: {
-          id?: string;
-          created_at?: string;
-          user_id?: string;
-          course_id?: string | null;
-          amount?: number;
-          status?: string;
-          payment_date?: string;
-          asaas_id?: string | null;
-          payment_method?: string;
+          order_number?: number;
         };
       };
       library_materials: {
@@ -261,13 +188,13 @@ export interface Database {
           id: string;
           created_at: string;
           title: string;
-          description: string;
+          description: string | null;
           type: string;
-          category: string;
-          file_size: string;
-          pages: number;
+          category: string | null;
+          file_size: string | null;
+          pages: number | null;
           published_at: string;
-          download_url: string;
+          download_url: string | null;
           cover_image_url: string | null;
           download_count: number;
         };
@@ -275,13 +202,13 @@ export interface Database {
           id?: string;
           created_at?: string;
           title: string;
-          description: string;
+          description?: string | null;
           type: string;
-          category: string;
-          file_size: string;
-          pages: number;
-          published_at: string;
-          download_url: string;
+          category?: string | null;
+          file_size?: string | null;
+          pages?: number | null;
+          published_at?: string;
+          download_url?: string | null;
           cover_image_url?: string | null;
           download_count?: number;
         };
@@ -289,13 +216,13 @@ export interface Database {
           id?: string;
           created_at?: string;
           title?: string;
-          description?: string;
+          description?: string | null;
           type?: string;
-          category?: string;
-          file_size?: string;
-          pages?: number;
+          category?: string | null;
+          file_size?: string | null;
+          pages?: number | null;
           published_at?: string;
-          download_url?: string;
+          download_url?: string | null;
           cover_image_url?: string | null;
           download_count?: number;
         };
@@ -303,24 +230,140 @@ export interface Database {
       user_downloads: {
         Row: {
           id: string;
-          created_at: string;
           user_id: string;
           material_id: string;
           download_date: string;
         };
         Insert: {
           id?: string;
-          created_at?: string;
           user_id: string;
           material_id: string;
-          download_date: string;
+          download_date?: string;
         };
         Update: {
           id?: string;
-          created_at?: string;
           user_id?: string;
           material_id?: string;
           download_date?: string;
+        };
+      };
+      course_enrollments: {
+        Row: {
+          id: string;
+          user_id: string;
+          course_id: string;
+          enrollment_date: string;
+          progress: number;
+          last_accessed: string;
+          completed: boolean;
+          completion_date: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          course_id: string;
+          enrollment_date?: string;
+          progress?: number;
+          last_accessed?: string;
+          completed?: boolean;
+          completion_date?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          course_id?: string;
+          enrollment_date?: string;
+          progress?: number;
+          last_accessed?: string;
+          completed?: boolean;
+          completion_date?: string | null;
+        };
+      };
+      payments: {
+        Row: {
+          id: string;
+          user_id: string;
+          course_id: string | null;
+          amount: number;
+          status: string;
+          payment_date: string;
+          asaas_id: string | null;
+          payment_method: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          course_id?: string | null;
+          amount: number;
+          status: string;
+          payment_date?: string;
+          asaas_id?: string | null;
+          payment_method?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          course_id?: string | null;
+          amount?: number;
+          status?: string;
+          payment_date?: string;
+          asaas_id?: string | null;
+          payment_method?: string | null;
+        };
+      };
+      certificates: {
+        Row: {
+          id: string;
+          user_id: string;
+          course_id: string;
+          issue_date: string;
+          download_url: string | null;
+          hours: number | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          course_id: string;
+          issue_date?: string;
+          download_url?: string | null;
+          hours?: number | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          course_id?: string;
+          issue_date?: string;
+          download_url?: string | null;
+          hours?: number | null;
+        };
+      };
+      credentials: {
+        Row: {
+          id: string;
+          user_id: string;
+          qr_code: string | null;
+          issue_date: string;
+          expiry_date: string | null;
+          status: string;
+          payment_id: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          qr_code?: string | null;
+          issue_date?: string;
+          expiry_date?: string | null;
+          status?: string;
+          payment_id?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          qr_code?: string | null;
+          issue_date?: string;
+          expiry_date?: string | null;
+          status?: string;
+          payment_id?: string | null;
         };
       };
     };
@@ -328,7 +371,12 @@ export interface Database {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      increment_download_count: {
+        Args: {
+          material_id: string;
+        };
+        Returns: void;
+      };
     };
     Enums: {
       [_ in never]: never;

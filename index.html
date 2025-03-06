@@ -4,7 +4,15 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + React + TS</title>
+    <title>AssociaçãoPro</title>
+    <!-- Adicionar React para o polyfill do Button -->
+    <script
+      crossorigin
+      src="https://unpkg.com/react@18/umd/react.production.min.js"
+    ></script>
+    <!-- Adicionar polyfill do Button antes de qualquer outro script -->
+    <script src="/button-polyfill.js"></script>
+    <script src="/global-button-fix.js"></script>
   </head>
   <body>
     <div id="root"></div>

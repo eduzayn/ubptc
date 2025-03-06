@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { createBucketIfNotExists } from "@/lib/upload";
 import { Database } from "@/types/supabase";
 
 export type LibraryMaterial =
@@ -43,6 +44,50 @@ export class LibraryService {
   }
 
   /**
+   * Obtém materiais da biblioteca por categoria
+   */
+  static async getMaterialsByCategory(category: string) {
+    try {
+      const { data, error } = await supabase
+        .from("library_materials")
+        .select("*")
+        .eq("category", category)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error(
+        `Erro ao buscar materiais da categoria ${category}:`,
+        error,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Busca materiais por termo de pesquisa
+   */
+  static async searchMaterials(searchTerm: string) {
+    try {
+      const { data, error } = await supabase
+        .from("library_materials")
+        .select("*")
+        .or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error(
+        `Erro ao buscar materiais com o termo "${searchTerm}":`,
+        error,
+      );
+      throw error;
+    }
+  }
+
+  /**
    * Obtém um material específico por ID
    */
   static async getMaterialById(id: string) {
@@ -80,6 +125,27 @@ export class LibraryService {
         .single();
 
       if (error) throw error;
+
+      // Criar notificação global sobre o novo material
+      try {
+        const { data: notificationService } = await import(
+          "@/services/notification.service"
+        );
+        const NotificationService = notificationService.NotificationService;
+
+        await NotificationService.createGlobalNotification(
+          "Novo material disponível",
+          `O material "${material.title}" foi adicionado à biblioteca.`,
+          "material",
+        );
+      } catch (notificationError) {
+        console.error(
+          "Erro ao criar notificação de novo material:",
+          notificationError,
+        );
+        // Não interromper o fluxo principal se a notificação falhar
+      }
+
       return data;
     } catch (error) {
       console.error("Erro ao adicionar material:", error);
@@ -162,10 +228,38 @@ export class LibraryService {
   }
 
   /**
+   * Obtém o histórico de downloads de um usuário
+   */
+  static async getUserDownloads(userId: string) {
+    try {
+      const { data, error } = await supabase
+        .from("user_downloads")
+        .select(
+          `
+          id,
+          download_date,
+          library_materials!inner(*)
+        `,
+        )
+        .eq("user_id", userId)
+        .order("download_date", { ascending: false });
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error(`Erro ao buscar downloads do usuário ${userId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Faz upload de um arquivo para o bucket de armazenamento
    */
   static async uploadFile(file: File, path: string) {
     try {
+      // Garantir que o bucket existe
+      await createBucketIfNotExists("library", true);
+
       const { data, error } = await supabase.storage
         .from("library")
         .upload(path, file, {
@@ -192,6 +286,9 @@ export class LibraryService {
    */
   static async uploadCoverImage(file: File, path: string) {
     try {
+      // Garantir que o bucket existe
+      await createBucketIfNotExists("covers", true);
+
       const { data, error } = await supabase.storage
         .from("covers")
         .upload(path, file, {
@@ -228,6 +325,51 @@ export class LibraryService {
       return data;
     } catch (error) {
       console.error("Erro ao buscar materiais populares:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obtém estatísticas da biblioteca
+   */
+  static async getLibraryStats() {
+    try {
+      // Total de materiais
+      const { count: totalMaterials, error: countError } = await supabase
+        .from("library_materials")
+        .select("*", { count: "exact", head: true });
+
+      if (countError) throw countError;
+
+      // Total de downloads
+      const { count: totalDownloads, error: downloadsError } = await supabase
+        .from("user_downloads")
+        .select("*", { count: "exact", head: true });
+
+      if (downloadsError) throw downloadsError;
+
+      // Materiais por tipo
+      const { data: materialsByType, error: typeError } = await supabase
+        .from("library_materials")
+        .select("type")
+        .then(({ data, error }) => {
+          if (error) throw error;
+          const types: Record<string, number> = {};
+          data?.forEach((item) => {
+            types[item.type] = (types[item.type] || 0) + 1;
+          });
+          return { data: types, error: null };
+        });
+
+      if (typeError) throw typeError;
+
+      return {
+        totalMaterials,
+        totalDownloads,
+        materialsByType,
+      };
+    } catch (error) {
+      console.error("Erro ao buscar estatísticas da biblioteca:", error);
       throw error;
     }
   }
