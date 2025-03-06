@@ -12,7 +12,10 @@ if (process.env.TEMPO === "true") {
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: process.env.VITE_BASE_PATH || "/",
+  base:
+    process.env.NODE_ENV === "development"
+      ? "/"
+      : process.env.VITE_BASE_PATH || "/",
   optimizeDeps: {
     entries: ["src/main.tsx", "src/tempobook/**/*"],
   },
@@ -31,19 +34,8 @@ export default defineConfig({
   server: {
     // @ts-ignore
     allowedHosts: true,
-  },
-  build: {
-    rollupOptions: {
-      input: {
-        main: path.resolve(__dirname, "index.html"),
-        admin: path.resolve(__dirname, "public/admin/index.html"),
-        adminDashboard: path.resolve(
-          __dirname,
-          "public/admin/dashboard/index.html",
-        ),
-        adminLogin: path.resolve(__dirname, "public/admin/login/index.html"),
-        painel: path.resolve(__dirname, "public/painel/index.html"),
-      },
+    hmr: {
+      overlay: false,
     },
   },
 });
