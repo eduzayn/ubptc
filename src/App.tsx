@@ -1,18 +1,16 @@
-import { Routes, Route } from "react-router-dom";
-import routes from "./routes";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import AdminDashboard from "./pages/admin/AdminDashboard";
 
-export default function App() {
+function App() {
   return (
-    <div className="min-h-screen bg-background">
+    <BrowserRouter>
       <Routes>
-        {/* Tempo routes */}
-        {import.meta.env.VITE_TEMPO && <Route path="/tempobook/*" />}
-
-        {/* App routes */}
-        {routes.map((route) => (
-          <Route key={route.path} path={route.path} element={route.element} />
-        ))}
+        <Route path="/" element={<AdminDashboard />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="*" element={<AdminDashboard />} />
       </Routes>
-    </div>
+    </BrowserRouter>
   );
 }
+
+export default App;
