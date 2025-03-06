@@ -50,6 +50,5 @@ export default defineConfig({
   define: {
     // Definir variáveis globais para o build
     "window.Button": "window.Button",
-    "global.Button": "global.Button",
   },
 });

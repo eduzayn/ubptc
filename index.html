@@ -7,6 +7,10 @@
     <title>Vite + React + TS</title>
     <!-- Adicionar o polyfill antes de qualquer script da aplicação -->
     <script src="/button-polyfill.js"></script>
+    <script>
+      // Definir global como window para evitar erros
+      window.global = window;
+    </script>
   </head>
   <body>
     <div id="root"></div>
