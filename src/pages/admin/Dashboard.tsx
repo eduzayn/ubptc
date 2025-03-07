@@ -1,3 +1,6 @@
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { AuthService } from "@/services/auth.service";
 import {
   Card,
   CardContent,
@@ -11,6 +14,23 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
 export default function AdminDashboard() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    verifyAccess();
+  }, []);
+
+  const verifyAccess = async () => {
+    try {
+      const isAdmin = await AuthService.isAdmin();
+      if (!isAdmin) {
+        navigate("/login");
+      }
+    } catch (error) {
+      console.error("Erro ao verificar acesso:", error);
+      navigate("/login");
+    }
+  };
   // Mock data - in a real app, this would come from your API
   const stats = {
     totalUsers: 256,

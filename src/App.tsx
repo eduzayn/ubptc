@@ -1,4 +1,7 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Outlet } from "react-router-dom";
+import { supabase } from "@/lib/supabase";
+import ProtectedRoute from "./components/ProtectedRoute";
+import AdminRoute from "./components/auth/AdminRoute";
 import MainLayout from "./components/layout/MainLayout";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -24,6 +27,7 @@ function App() {
   return (
     <Routes>
       <Route element={<MainLayout />}>
+        {/* Rotas públicas */}
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/associar" element={<Register />} />
@@ -40,9 +44,20 @@ function App() {
         <Route path="/pagamento-pendente" element={<PaymentPending />} />
         <Route path="/acesso-direto" element={<LoginBypass />} />
         <Route path="/biblioteca" element={<Library />} />
-        <Route path="/admin/dashboard" element={<AdminDashboard />} />
-        <Route path="/admin/cursos/editor" element={<CourseEditor />} />
-        <Route path="/admin/biblioteca" element={<LibraryManager />} />
+
+        {/* Rotas admin protegidas */}
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <Outlet />
+            </AdminRoute>
+          }
+        >
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="cursos/editor" element={<CourseEditor />} />
+          <Route path="biblioteca" element={<LibraryManager />} />
+        </Route>
       </Route>
     </Routes>
   );

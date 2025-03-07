@@ -120,6 +120,24 @@ export class AuthService {
   }
 
   /**
+   * Verifica se o usuário atual tem permissões de administrador
+   */
+  static async isAdmin() {
+    try {
+      const { user, profile } = await this.getCurrentUser();
+
+      if (!user || !profile) {
+        return false;
+      }
+
+      return profile.role === "admin";
+    } catch (error) {
+      console.error("Erro ao verificar status admin:", error);
+      return false;
+    }
+  }
+
+  /**
    * Envia email de redefinição de senha
    */
   static async resetPassword(email: string) {
