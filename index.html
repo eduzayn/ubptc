@@ -5,23 +5,15 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Vite + React + TS</title>
-    <!-- Adicionar o polyfill antes de qualquer script da aplicação -->
     <script>
       // Definir global como window para evitar erros
       window.global = window;
 
-      // Garantir que Button esteja definido globalmente
+      // Definir Button como uma função vazia para evitar erros
       window.Button =
         window.Button ||
-        function Button(props) {
-          console.log("Usando Button polyfill");
-          return {
-            type: "button",
-            props: props || {},
-            render: function () {
-              return document.createElement("button");
-            },
-          };
+        function (props) {
+          return props.children || null;
         };
     </script>
   </head>

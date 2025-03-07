@@ -23,6 +23,14 @@ import PaymentPending from "./pages/PaymentPending";
 import LoginBypass from "./pages/LoginBypass";
 import Library from "./pages/Library";
 
+// Garantir que Button esteja definido globalmente
+if (typeof window !== "undefined" && !window.Button) {
+  // @ts-ignore
+  window.Button = function (props) {
+    return props.children || null;
+  };
+}
+
 function App() {
   return (
     <Routes>
