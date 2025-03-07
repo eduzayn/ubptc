@@ -53,9 +53,4 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 );
 Button.displayName = "Button";
 
-// Definir o componente Button globalmente
-if (typeof window !== "undefined") {
-  window.Button = Button;
-}
-
 export { Button, buttonVariants };
