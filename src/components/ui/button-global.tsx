@@ -1,8 +1,12 @@
-import { Button } from "./button";
+import React from "react";
+import { Button as ButtonComponent } from "./button";
 
-// Definir o componente Button globalmente
+// Definir o componente Button globalmente para evitar o erro "Button is not defined"
 if (typeof window !== "undefined") {
-  window.Button = Button;
+  // @ts-ignore
+  window.Button = ButtonComponent;
+  console.log("Button definido globalmente", window.Button);
 }
 
-// Não exportamos nada aqui, apenas definimos o Button globalmente
+// Exportar o componente para uso local
+export { ButtonComponent as Button };

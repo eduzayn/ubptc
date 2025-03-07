@@ -6,10 +6,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Vite + React + TS</title>
     <!-- Adicionar o polyfill antes de qualquer script da aplicação -->
-    <script src="/button-polyfill.js"></script>
     <script>
       // Definir global como window para evitar erros
       window.global = window;
+
+      // Garantir que Button esteja definido globalmente
+      window.Button =
+        window.Button ||
+        function Button(props) {
+          console.log("Usando Button polyfill");
+          return {
+            type: "button",
+            props: props || {},
+            render: function () {
+              return document.createElement("button");
+            },
+          };
+        };
     </script>
   </head>
   <body>
